@@ -1,7 +1,8 @@
 let starsX = [];
 let starsY = [];
 let gravity = 0.1;
-let gameStarted = false;
+let gameState = 0;
+// Menu = 0, Game = 1, Game over = 2
 let userName = "";
 let score = 0;
 let highscore = 0;
@@ -34,6 +35,8 @@ function setup() {
     starsY.push(random(0, height));
   }
   rect(0, 550, 600, 50);
+  spaceship.position.x = 300;
+  spaceship.position.y = 10;
 }
 
 function createParticles(direction) {
@@ -79,6 +82,7 @@ function updateParticle(particle) {
   if (particle.y > 550) {
     particle.y = 550 - Math.random() * 2;
 
+    // TODO fix check angle is not alread correct angle, if going sideways
     if (particle.angle > Math.PI / 2) {
       particle.angle = particle.angle + Math.PI / 2;
     } else if (particle.angle < Math.PI / 2) {
@@ -131,7 +135,35 @@ function drawRocket() {
   pop(); // Restore the transformation matrix
 }
 
-function calculatePhysics() {
+function drawMenu() {
+  fill(255);
+  textSize(32);
+  background(0, 0, 0, 200);
+  textAlign(CENTER, TOP);
+  text("Highscore: " + highscore, 300, 40);
+  text("Name: " + userName, 300, 80);
+  if (userName.length > 0) {
+    text("Press Enter to start", 300, 120);
+  }
+  if (score > 0) {
+    text("Last score: " + score, 300, 160);
+  }
+}
+
+function drawGameOver() {
+  fill(255);
+  textSize(32);
+  background(0, 0, 0, 200);
+  text("Game over", 300, 40);
+  text("Score: " + score, 300, 80);
+  text("Highscore: " + highscore, 300, 120);
+  if (score > highscore) {
+    highscore = score;
+  }
+  text("Press Enter to restart", 300, 160);
+}
+
+function gameEngine() {
   //Default value for animation status
   spaceship.rotatingLeft = false;
   spaceship.rotatingRight = false;
@@ -162,11 +194,6 @@ function calculatePhysics() {
     spaceship.angle += 0.1;
   }
 
-  if (spaceship.position.y > 460) {
-    spaceship.position.y = 460;
-    gameStarted = false;
-  }
-
   if (spaceship.engineOn) {
     for (let i = 0; i < 20; i++) {
       particles.push(
@@ -178,18 +205,55 @@ function calculatePhysics() {
       );
     }
   }
+
+  if (spaceship.position.y > 460) {
+    spaceship.position.y = 460;
+    gameState = 2;
+
+    angleInDegrees = spaceship.angle * (180 / Math.PI);
+
+    // The following 6 lines was written by ChatGpt, it converts the angle to a value between -180 and 180
+    while (angleInDegrees > 180) {
+      angleInDegrees -= 360;
+    }
+    while (angleInDegrees < -180) {
+      angleInDegrees += 360;
+    }
+
+    calcScore =
+      500 -
+      Math.abs(Math.floor(spaceship.velocity.x * 100)) -
+      Math.abs(Math.floor(spaceship.velocity.y * 100)) -
+      Math.abs(Math.floor((angleInDegrees % 360) * 0.5));
+
+    score = score < 0 ? 0 : calcScore;
+  }
 }
 
-function drawMenu() {
-  fill(255);
-  textSize(32);
-  text("Highscore: " + highscore, 10, 40);
-  text("Name: " + userName, 10, 80);
-  if (userName.length > 0) {
-    text("Press Enter to start", 10, 120);
-  }
-  if (score > 0) {
-    text("Last score: " + score, 10, 160);
+function keyPressed() {
+  switch (gameState) {
+    case 0:
+      if (key.length === 1) {
+        userName += key;
+      } else if (key === "Backspace") {
+        userName = userName.slice(0, -1);
+      } else if (key === "Enter" && userName.length > 0) {
+        resetGame();
+        gameState = 1;
+      }
+      break;
+
+    case 2:
+      if (key === "Enter") {
+        resetGame();
+        gameState = 1;
+      } else if (key === "Escape") {
+        gameState = 0;
+      }
+      break;
+
+    default:
+      break;
   }
 }
 
@@ -198,32 +262,34 @@ function draw() {
   background(0);
   rect(0, 550, 600, 50);
   drawStars(100, 100);
-  if (gameStarted) {
-    calculatePhysics();
-    drawRocket();
-  } else {
-    drawMenu();
+
+  switch (gameState) {
+    case 0:
+      drawMenu();
+      break;
+
+    case 1:
+      gameEngine();
+      drawRocket();
+      break;
+
+    case 2:
+      drawGameOver();
+      break;
   }
+
   for (let particle of particles) {
     updateParticle(particle);
     drawParticle(particle);
   }
 }
 
-function keyPressed() {
-  if (!gameStarted) {
-    if (key.length === 1) {
-      userName += key;
-    } else if (key === "Backspace") {
-      userName = userName.slice(0, -1);
-    } else if (key === "Enter" && userName.length > 0) {
-      gameStarted = true;
-      score = 0;
-      spaceship.position.x = 300;
-      spaceship.position.y = 0;
-      spaceship.velocity.x = 0;
-      spaceship.velocity.y = 0;
-      spaceship.angle = 0;
-    }
-  }
+function resetGame() {
+  gameState = 1;
+  score = 0;
+  spaceship.position.x = 300;
+  spaceship.position.y = 0;
+  spaceship.velocity.x = Math.random() * 2;
+  spaceship.velocity.y = Math.random() * 2;
+  spaceship.angle = Math.random() * Math.PI + Math.PI / 2;
 }
