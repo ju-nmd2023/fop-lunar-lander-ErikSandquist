@@ -9,6 +9,10 @@ let thrust = 0.2;
 let particles = [];
 
 let spaceship = {
+  size: {
+    width: 50,
+    height: 90,
+  },
   position: {
     x: 0,
     y: 0,
@@ -32,10 +36,21 @@ function setup() {
   rect(0, 550, 600, 50);
 }
 
-function createParticles(x, y, direction) {
-  const velocity = 0.8 + Math.random() * 2;
-  const maxLife = 100 + Math.floor(Math.random() * 100);
-  let angle = 0;
+function createParticles(direction) {
+  const velocity = 4 + Math.random() * 2;
+  const maxLife = 30 + Math.floor(Math.random() * 10);
+  let angle;
+
+  // This is annoying as f, but we calculate the bottom middle of the spaceship when rotated so the particles line up
+  let x =
+    spaceship.position.x + // Spaceship x from top left
+    spaceship.size.width / 2 + // Spaceship x middle
+    (Math.sin(-spaceship.angle) * spaceship.size.height) / 2; // Calculate from the rotation real x position
+  let y =
+    spaceship.position.y + // Spaceship y from top left
+    spaceship.size.height / 2 + // Spaceship y middle
+    (Math.cos(-spaceship.angle) * spaceship.size.height) / 2; // Calculate from the rotation real y position
+
   if (direction === "left") {
     angle = Math.PI * 1.5 + Math.random() * Math.PI * 0.5;
   } else if (direction === "right") {
@@ -47,6 +62,7 @@ function createParticles(x, y, direction) {
       (Math.random() * Math.PI) / 4 -
       Math.PI / 8;
   }
+
   return {
     x: x,
     y: y,
@@ -54,14 +70,28 @@ function createParticles(x, y, direction) {
     maxLife: maxLife,
     life: 0,
     angle: angle,
-    // Opacity?
+    opacity: 255,
   };
 }
 
 function updateParticle(particle) {
+  // This took a while but when particle hits the ground (550) it should bounce off and change direction
+  if (particle.y > 550) {
+    particle.y = 550 - Math.random() * 2;
+
+    if (particle.angle > Math.PI / 2) {
+      particle.angle = particle.angle + Math.PI / 2;
+    } else if (particle.angle < Math.PI / 2) {
+      particle.angle = particle.angle - Math.PI / 2;
+    }
+  }
+
   particle.x = particle.x + Math.cos(particle.angle) * particle.velocity;
   particle.y = particle.y + Math.sin(particle.angle) * particle.velocity;
   particle.life++;
+
+  // Fade out the particle over time
+  particle.opacity -= 255 / particle.maxLife;
 
   if (particle.life > particle.maxLife) {
     particles.splice(particles.indexOf(particle), 1);
@@ -72,7 +102,7 @@ function drawParticle(particle) {
   push();
   translate(particle.x, particle.y);
   noStroke();
-  fill(255, 255, 255, 40);
+  fill(255, 255, 255, particle.opacity);
   ellipse(0, 0, 6);
   pop();
 }
@@ -87,9 +117,17 @@ function drawStars(x, y) {
 
 function drawRocket() {
   push(); // Save the current transformation matrix
-  translate(spaceship.position.x + 25, spaceship.position.y + 45); // Move the origin to the center of the rocket
+  translate(
+    spaceship.position.x + spaceship.size.width / 2,
+    spaceship.position.y + spaceship.size.height / 2
+  ); // Move the origin to the center of the rocket
   rotate(spaceship.angle); // Rotate the rocket
-  rect(-25, -45, 50, 90); // Draw the rocket centered at the new origin
+  rect(
+    -spaceship.size.width / 2,
+    -spaceship.size.height / 2,
+    spaceship.size.width,
+    spaceship.size.height
+  ); // Draw the rocket centered at the new origin
   pop(); // Restore the transformation matrix
 }
 
@@ -129,7 +167,7 @@ function calculatePhysics() {
     gameStarted = false;
   }
 
-  if (spaceship.position.y > 100 && spaceship.engineOn) {
+  if (spaceship.engineOn) {
     for (let i = 0; i < 20; i++) {
       particles.push(
         createParticles(
