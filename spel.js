@@ -1,13 +1,14 @@
 let starsX = [];
 let starsY = [];
-let gravity = 0.1;
+let gravity = 0.05;
 let gameState = 0;
 // Menu = 0, Game = 1, Game over = 2
 let userName = "";
 let score = 0;
 let highscore = 0;
-let thrust = 0.2;
+let thrust = 0.15;
 let particles = [];
+let ground = 550;
 
 let spaceship = {
   size: {
@@ -23,20 +24,27 @@ let spaceship = {
     x: 0,
     y: 0,
   },
-  engineOn: false,
+  engine: {
+    on: false,
+    duration: 0,
+  },
   rotatingLeft: false, // TODO implement rotating visuals
   rotatingRight: false, // TODO implement rotating visuals
 };
 
+function preload() {
+  img = loadImage("rocket.png");
+}
+
 function setup() {
-  createCanvas(600, 600);
+  createCanvas(1280, 600);
   frameRate(60);
   for (let i = 0; i < 100; i++) {
     starsX.push(random(0, width));
     starsY.push(random(0, height));
   }
-  rect(0, 550, 600, 50);
-  spaceship.position.x = 300;
+  rect(0, ground, 1280, 50);
+  spaceship.position.x = 640;
   spaceship.position.y = 10;
 }
 
@@ -47,13 +55,14 @@ function createParticles(direction) {
 
   // This is annoying as f, but we calculate the bottom middle of the spaceship when rotated so the particles line up
   let x =
-    spaceship.position.x + // Spaceship x from top left
+    spaceship.position.x +
+    Math.random() + // Spaceship x from top left
     spaceship.size.width / 2 + // Spaceship x middle
-    (Math.sin(-spaceship.angle) * spaceship.size.height) / 2; // Calculate from the rotation real x position
+    (Math.sin(-spaceship.angle) * (spaceship.size.height - 30)) / 2; // Calculate from the rotation real x position
   let y =
     spaceship.position.y + // Spaceship y from top left
     spaceship.size.height / 2 + // Spaceship y middle
-    (Math.cos(-spaceship.angle) * spaceship.size.height) / 2; // Calculate from the rotation real y position
+    (Math.cos(-spaceship.angle) * (spaceship.size.height - 30)) / 2; // Calculate from the rotation real y position
 
   if (direction === "left") {
     angle = Math.PI * 1.5 + Math.random() * Math.PI * 0.5;
@@ -80,13 +89,17 @@ function createParticles(direction) {
 
 function updateParticle(particle) {
   // This took a while but when particle hits the ground (550) it should bounce off and change direction
-  if (particle.y > 550) {
-    particle.y = 550 - Math.random() * 2;
+  if (particle.y > ground) {
+    particle.y = ground - Math.random() * 2;
 
-    // TODO fix check angle is not alread correct angle, if going sideways
-    if (particle.angle > Math.PI / 2) {
+    particle.angle = particle.angle % Math.PI;
+    particle.angle =
+      particle.angle < 0 ? particle.angle + Math.PI : particle.angle; // Make sure angle is positive, math.abs doesnt work because the angle is pi - angle
+
+    // Bounce right or left
+    if (particle.angle > Math.PI / 2 && particle.angle < Math.PI) {
       particle.angle = particle.angle + Math.PI / 2;
-    } else if (particle.angle < Math.PI / 2) {
+    } else if (particle.angle < Math.PI / 2 && particle.angle > 0) {
       particle.angle = particle.angle - Math.PI / 2;
     }
   }
@@ -127,12 +140,14 @@ function drawRocket() {
     spaceship.position.y + spaceship.size.height / 2
   ); // Move the origin to the center of the rocket
   rotate(spaceship.angle); // Rotate the rocket
-  rect(
+  image(
+    img,
     -spaceship.size.width / 2,
     -spaceship.size.height / 2,
     spaceship.size.width,
     spaceship.size.height
   ); // Draw the rocket centered at the new origin
+
   pop(); // Restore the transformation matrix
 }
 
@@ -141,13 +156,13 @@ function drawMenu() {
   textSize(32);
   background(0, 0, 0, 200);
   textAlign(CENTER, TOP);
-  text("Highscore: " + highscore, 300, 40);
-  text("Name: " + userName, 300, 80);
+  text("Highscore: " + highscore, 640, 40);
+  text("Name: " + userName, 640, 80);
   if (userName.length > 0) {
-    text("Press Enter to start", 300, 120);
+    text("Press Enter to start", 640, 120);
   }
   if (score > 0) {
-    text("Last score: " + score, 300, 160);
+    text("Last score: " + score, 640, 160);
   }
 }
 
@@ -155,20 +170,20 @@ function drawGameOver() {
   fill(255);
   textSize(32);
   background(0, 0, 0, 200);
-  text("Game over", 300, 40);
-  text("Score: " + score, 300, 80);
-  text("Highscore: " + highscore, 300, 120);
+  text("Game over", 640, 40);
+  text("Score: " + score, 640, 80);
+  text("Highscore: " + highscore, 640, 120);
   if (score > highscore) {
     highscore = score;
   }
-  text("Press Enter to restart", 300, 160);
+  text("Press Enter to restart", 640, 160);
 }
 
 function gameEngine() {
   //Default value for animation status
   spaceship.rotatingLeft = false;
   spaceship.rotatingRight = false;
-  spaceship.engineOn = false;
+  spaceship.engine.on = false;
 
   // Move the spaceship from velocity
   spaceship.position.x += spaceship.velocity.x;
@@ -176,7 +191,7 @@ function gameEngine() {
 
   // If W is pressed turn on the engine and increase the velocity
   if (keyIsDown(87)) {
-    spaceship.engineOn = true;
+    spaceship.engine.on = true;
 
     // Increase the velocity when the up arrow key is pressed
     spaceship.velocity.x -= thrust * Math.sin(-spaceship.angle);
@@ -189,13 +204,18 @@ function gameEngine() {
   // If A or D is pressed rotate the spaceship and start the animation
   if (keyIsDown(65)) {
     spaceship.rotatingLeft = true;
-    spaceship.angle -= 0.1;
+    spaceship.angle -= 0.05;
   } else if (keyIsDown(68)) {
     spaceship.rotatingRight = true;
-    spaceship.angle += 0.1;
+    spaceship.angle += 0.05;
   }
 
-  if (spaceship.engineOn) {
+  if (spaceship.engine.on) {
+    spaceship.engine.duration =
+      spaceship.engine.duration < 0 ? 0 : spaceship.engine.duration;
+    spaceship.engine.duration =
+      spaceship.engine.duration > 30 ? 30 : spaceship.engine.duration;
+    spaceship.engine.duration++;
     for (let i = 0; i < 20; i++) {
       particles.push(
         createParticles(
@@ -205,8 +225,11 @@ function gameEngine() {
         )
       );
     }
+  } else {
+    spaceship.engine.duration--;
   }
 
+  // TODO implement check when angled with cos, sin and stuff, probably going to be painful
   if (spaceship.position.y > 460) {
     spaceship.position.y = 460;
     gameState = 2;
@@ -261,7 +284,6 @@ function keyPressed() {
 function draw() {
   clear();
   background(0);
-  rect(0, 550, 600, 50);
   drawStars(100, 100);
 
   switch (gameState) {
@@ -271,6 +293,10 @@ function draw() {
 
     case 1:
       gameEngine();
+      for (let particle of particles) {
+        updateParticle(particle);
+        drawParticle(particle);
+      }
       drawRocket();
       break;
 
@@ -279,18 +305,15 @@ function draw() {
       break;
   }
 
-  for (let particle of particles) {
-    updateParticle(particle);
-    drawParticle(particle);
-  }
+  rect(0, ground, 1280, 50);
 }
 
 function resetGame() {
   gameState = 1;
   score = 0;
-  spaceship.position.x = 300;
+  spaceship.position.x = 640;
   spaceship.position.y = 0;
   spaceship.velocity.x = Math.random() * 2;
-  spaceship.velocity.y = Math.random() * 2;
-  spaceship.angle = Math.random() * Math.PI + Math.PI / 2;
+  spaceship.velocity.y = -Math.random() * 2;
+  spaceship.angle = Math.random() * Math.PI + Math.PI / 2 - Math.PI / 4;
 }
