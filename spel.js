@@ -24,12 +24,13 @@ let spaceship = {
     y: 0,
   },
   engineOn: false,
-  rotatingLeft: false,
-  rotatingRight: false,
+  rotatingLeft: false, // TODO implement rotating visuals
+  rotatingRight: false, // TODO implement rotating visuals
 };
 
 function setup() {
   createCanvas(600, 600);
+  frameRate(60);
   for (let i = 0; i < 100; i++) {
     starsX.push(random(0, width));
     starsY.push(random(0, height));
@@ -220,13 +221,13 @@ function gameEngine() {
       angleInDegrees += 360;
     }
 
-    calcScore =
+    score =
       500 -
       Math.abs(Math.floor(spaceship.velocity.x * 100)) -
       Math.abs(Math.floor(spaceship.velocity.y * 100)) -
       Math.abs(Math.floor((angleInDegrees % 360) * 0.5));
 
-    score = score < 0 ? 0 : calcScore;
+    score = score < 0 ? 0 : score;
   }
 }
 
