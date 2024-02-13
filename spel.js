@@ -37,6 +37,7 @@ function preload() {
 }
 
 function setup() {
+  highscore = localStorage.getItem("highscore") || 0;
   createCanvas(1280, 600);
   frameRate(60);
   for (let i = 0; i < 100; i++) {
@@ -173,9 +174,6 @@ function drawGameOver() {
   text("Game over", 640, 40);
   text("Score: " + score, 640, 80);
   text("Highscore: " + highscore, 640, 120);
-  if (score > highscore) {
-    highscore = score;
-  }
   text("Press Enter to restart", 640, 160);
 }
 
@@ -251,6 +249,11 @@ function gameEngine() {
       Math.abs(Math.floor((angleInDegrees % 360) * 0.5));
 
     score = score < 0 ? 0 : score;
+
+    if (score > highscore) {
+      highscore = score;
+      localStorage.setItem("highscore", highscore);
+    }
   }
 }
 
@@ -311,9 +314,10 @@ function draw() {
 function resetGame() {
   gameState = 1;
   score = 0;
+  particles = [];
   spaceship.position.x = 640;
   spaceship.position.y = 0;
-  spaceship.velocity.x = Math.random() * 2;
+  spaceship.velocity.x = Math.random() * 4;
   spaceship.velocity.y = -Math.random() * 2;
   spaceship.angle = Math.random() * Math.PI + Math.PI / 2 - Math.PI / 4;
 }
