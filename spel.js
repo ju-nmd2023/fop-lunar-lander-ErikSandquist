@@ -9,6 +9,7 @@ let highscore = 0;
 let thrust = 0.15;
 let particles = [];
 let ground = 550;
+let win = false;
 
 let spaceship = {
   size: {
@@ -33,7 +34,10 @@ let spaceship = {
 };
 
 function preload() {
-  img = loadImage("rocket.png");
+  img = loadImage("images/rocket.png");
+  wKey = loadImage("images/letter_w.png");
+  aKey = loadImage("images/letter_a.png");
+  dKey = loadImage("images/letter_d.png");
 }
 
 function setup() {
@@ -56,8 +60,8 @@ function createParticles(direction) {
 
   // This is annoying as f, but we calculate the bottom middle of the spaceship when rotated so the particles line up
   let x =
-    spaceship.position.x +
-    Math.random() + // Spaceship x from top left
+    spaceship.position.x + // Spaceship x from top left
+    Math.random() + // Add some random so it doesnt look like it comes out as a circle
     spaceship.size.width / 2 + // Spaceship x middle
     (Math.sin(-spaceship.angle) * (spaceship.size.height - 30)) / 2; // Calculate from the rotation real x position
   let y =
@@ -140,7 +144,9 @@ function drawRocket() {
     spaceship.position.x + spaceship.size.width / 2,
     spaceship.position.y + spaceship.size.height / 2
   ); // Move the origin to the center of the rocket
+
   rotate(spaceship.angle); // Rotate the rocket
+
   image(
     img,
     -spaceship.size.width / 2,
@@ -159,22 +165,35 @@ function drawMenu() {
   textAlign(CENTER, TOP);
   text("Highscore: " + highscore, 640, 40);
   text("Name: " + userName, 640, 80);
+  textSize(24);
+  text("Use WAD to control your rocket", 640, 280);
+  image(wKey, 640 - 25, 320, 50, 50);
+  image(aKey, 640 - 75, 370, 50, 50);
+  image(dKey, 640 + 25, 370, 50, 50);
+
+  let infoText = "Enter your name";
   if (userName.length > 0) {
-    text("Press Enter to start", 640, 120);
+    infoText = "Press Enter to start";
   }
-  if (score > 0) {
-    text("Last score: " + score, 640, 160);
-  }
+  text(infoText, 640, 120);
+
+  textSize(24);
+  text("Get 400 points to win!", 640, 430);
 }
 
 function drawGameOver() {
   fill(255);
-  textSize(32);
   background(0, 0, 0, 200);
-  text("Game over", 640, 40);
-  text("Score: " + score, 640, 80);
-  text("Highscore: " + highscore, 640, 120);
-  text("Press Enter to restart", 640, 160);
+  textSize(64);
+  if (win) {
+    text("You win!", 640, 40);
+  } else {
+    text("You lose!", 640, 40);
+  }
+  textSize(32);
+  text("Score: " + score, 640, 120);
+  text("Highscore: " + highscore, 640, 160);
+  text("Press Enter to restart", 640, 200);
 }
 
 function gameEngine() {
@@ -212,9 +231,9 @@ function gameEngine() {
     spaceship.engine.duration =
       spaceship.engine.duration < 0 ? 0 : spaceship.engine.duration;
     spaceship.engine.duration =
-      spaceship.engine.duration > 30 ? 30 : spaceship.engine.duration;
+      spaceship.engine.duration > 180 ? 180 : spaceship.engine.duration;
     spaceship.engine.duration++;
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < spaceship.engine.duration / 4; i++) {
       particles.push(
         createParticles(
           spaceship.position.x + 25,
@@ -224,7 +243,7 @@ function gameEngine() {
       );
     }
   } else {
-    spaceship.engine.duration--;
+    spaceship.engine.duration -= 10;
   }
 
   // TODO implement check when angled with cos, sin and stuff, probably going to be painful
@@ -250,8 +269,11 @@ function gameEngine() {
 
     score = score < 0 ? 0 : score;
 
+    win = score < 400 ? false : true;
+
     if (score > highscore) {
       highscore = score;
+      // save highscore to cookie/localstorage
       localStorage.setItem("highscore", highscore);
     }
   }
@@ -312,6 +334,7 @@ function draw() {
 }
 
 function resetGame() {
+  win = false;
   gameState = 1;
   score = 0;
   particles = [];
